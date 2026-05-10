@@ -60,6 +60,7 @@
   include_role:
     name: helm_component
   vars:
+    component_ns: "{{ namespace }}"
     name: "orderer"
     org_name: "{{ org.name | lower }}"
     component_name: "{{ orderer.name | lower  }}"
