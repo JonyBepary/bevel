@@ -82,21 +82,32 @@ spec:
           vaultBevelFunc "init"
 
           echo "Getting Orderer TLS certificates from Vault."
-          vaultBevelFunc "readJson" "${VAULT_ORDERER_SECRET_PREFIX}/tls"
-
-          TLS_CA_CERT=$(echo ${VAULT_SECRET} | jq -r '.["ca.crt"]')
+          # Try both standard and Bevel-specific paths
+          vaultBevelFunc "readJson" "${VAULT_ORDERER_SECRET_PREFIX}"
+          
+          TLS_CA_CERT=$(echo ${VAULT_SECRET} | jq -r '.["ca.crt"] // .["rootca_pem"] // .["ca.crt"]')
+          if [ "${TLS_CA_CERT}" = "null" ]; then
+             # Try /tls subpath if direct read failed or didn't have the field
+             vaultBevelFunc "readJson" "${VAULT_ORDERER_SECRET_PREFIX}/tls"
+             TLS_CA_CERT=$(echo ${VAULT_SECRET} | jq -r '.["ca.crt"] // .["rootca_pem"]')
+          fi
+          
           OUTPUT_PATH="${MOUNT_PATH}/orderer/tls"
           mkdir -p ${OUTPUT_PATH}
           echo "${TLS_CA_CERT}" >> ${OUTPUT_PATH}/ca.crt
 
           echo "Getting MSP certificates from Vault."
-          vaultBevelFunc "readJson" "${VAULT_PEER_SECRET_PREFIX}/msp"
+          # Try both direct path and /msp subpath
+          vaultBevelFunc "readJson" "${VAULT_PEER_SECRET_PREFIX}"
+          if [ "$(echo ${VAULT_SECRET} | jq -r '.admincerts // .client_crt')" = "null" ]; then
+             vaultBevelFunc "readJson" "${VAULT_PEER_SECRET_PREFIX}/msp"
+          fi
 
-          ADMINCERT=$(echo ${VAULT_SECRET} | jq -r '.["admincerts"]')
-          CACERTS=$(echo ${VAULT_SECRET} | jq -r '.["cacerts"]')
-          KEYSTORE=$(echo ${VAULT_SECRET} | jq -r '.["keystore"]')
-          SIGNCERTS=$(echo ${VAULT_SECRET} | jq -r '.["signcerts"]')
-          TLSCACERTS=$(echo ${VAULT_SECRET} | jq -r '.["tlscacerts"]')
+          ADMINCERT=$(echo ${VAULT_SECRET} | jq -r '.["admincerts"] // .["client_crt"]')
+          CACERTS=$(echo ${VAULT_SECRET} | jq -r '.["cacerts"] // .["ca_crt"]')
+          KEYSTORE=$(echo ${VAULT_SECRET} | jq -r '.["keystore"] // .["client_key"]')
+          SIGNCERTS=$(echo ${VAULT_SECRET} | jq -r '.["signcerts"] // .["client_crt"]')
+          TLSCACERTS=$(echo ${VAULT_SECRET} | jq -r '.["tlscacerts"] // .["ca_crt"]')
 
           OUTPUT_PATH="${MOUNT_PATH}/admin/msp"
           mkdir -p ${OUTPUT_PATH}/admincerts
