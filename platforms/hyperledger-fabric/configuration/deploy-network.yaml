@@ -71,9 +71,9 @@
 
     #Creating a pause so that the client certificates are valid
     # You can continue if the CA-server pods are running for more than 5 minutes
-    - pause:
-        prompt: "Sleeping... so that the client certificates are valid"
-        minutes: 6
+#    - pause:
+#        prompt: "Sleeping... so that the client certificates are valid"
+#        minutes: 6
 
     # This role creates value file for zk-kafka (if kafka consensus is chosen) and orderer
     - name: Create all orderers
