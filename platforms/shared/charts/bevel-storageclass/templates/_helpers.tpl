@@ -7,13 +7,5 @@
 {{- end -}}
 
 {{- define "provisioner" -}}
-{{- if eq .Values.global.cluster.provider "aws" -}}
-provisioner: kubernetes.io/aws-ebs
-{{- else if eq .Values.global.cluster.provider "gcp" -}}
-provisioner: pd.csi.storage.gke.io
-{{- else if eq .Values.global.cluster.provider "minikube" -}}
 provisioner: k8s.io/minikube-hostpath
-{{- else if eq .Values.global.cluster.provider "azure" -}}
-provisioner: disk.csi.azure.com
-{{- end -}}
 {{- end -}}
