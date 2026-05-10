@@ -1,0 +1,27 @@
+---
+- hosts: ansible_provisioners
+  gather_facts: no
+  tasks:
+    # This role creates the value file for creating channel from one organization
+    - name: "Create channel"
+      include_role:
+        name: "create/channels"
+      vars:
+        build_path: "./build"
+        channel_name: "{{ item.channel_name | lower }}"
+        participants: "{{ item.participants }}"
+        docker_url: "{{ network.docker.url }}"
+      loop: "{{ network['channels'] }}"
+      when: item.channel_status == 'new'
+
+    # This role creates the value file for joining channel from each participating peer
+    - name: "Join channel"
+      include_role:
+        name: "create/channels_join"
+      vars:
+        build_path: "./build"
+        channel_name: "{{ item.channel_name | lower }}"
+        docker_url: "{{ network.docker.url }}"
+        participants: "{{ item.participants }}"
+      loop: "{{ network['channels'] }}"
+      when: item.channel_status == 'new'
