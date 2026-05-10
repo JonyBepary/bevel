@@ -1,0 +1,59 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: chaincode-install-carrier-peer0-supplychain-1
+  namespace: carrier-net
+  annotations:
+    fluxcd.io/automated: "false"
+spec:
+  interval: 1m
+  releaseName: chaincode-install-carrier-peer0-supplychain-1
+  chart:
+    spec:
+      interval: 1m
+      sourceRef:
+        kind: GitRepository
+        name: flux-local
+        namespace: flux-local
+      chart: platforms/hyperledger-fabric/charts/fabric-chaincode-install
+  values:
+    metadata:
+      namespace: carrier-net
+      network:
+        version: 2.2.2
+      images:
+        fabrictools: ghcr.io/hyperledger/bevel-fabric-tools:2.2.2
+        alpineutils: ghcr.io/hyperledger/bevel-alpine:latest
+
+    peer:
+      name: peer0
+      address: peer0.carrier-net:7051
+      localmspid: carrierMSP
+      loglevel: debug
+      tlsstatus: true
+    vault:
+      role: vault-role
+      address: http://192.168.0.107:8200
+      authpath: localcarrier
+      adminsecretprefix: secretsv2/data/carrier/peerOrganizations/carrier-net/users/admin 
+      orderersecretprefix: secretsv2/data/carrier/peerOrganizations/carrier-net/orderer
+      secretgitprivatekey: secretsv2/data/carrier/credentials/carrier-net/git
+      serviceaccountname: vault-auth
+      type: hashicorp
+      imagesecretname: regcred
+      tls: false
+    orderer:
+      address: orderer1.supplychain-net:7050
+    chaincode:
+      builder: hyperledger/fabric-ccenv:2.2.2
+      name: supplychain
+      version: 1
+      lang: golang
+      maindirectory: cmd
+      repository:
+        hostname: "github.com"
+        git_username: "JonyBepary"
+        url: github.com/hyperledger/bevel-samples.git
+        branch: main
+        path: examples/supplychain-app/fabric/chaincode_rest_server/chaincode/
+      endorsementpolicies:  ''

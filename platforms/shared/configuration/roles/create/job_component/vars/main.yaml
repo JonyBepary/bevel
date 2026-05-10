@@ -28,7 +28,10 @@ charts:
   create_channel_job: fabric-channel-create
   join_channel_job: fabric-channel-join
 bevel_alpine_version: latest
-fabric_tools_image: bevel-fabric-tools
+fabric_tools_image:
+  1.4.8: bevel-fabric-tools:1.4.8
+  2.2.2: bevel-fabric-tools:2.2.2
+  2.5.4: bevel-fabric-tools:2.5.4
 indy_genesis: indy-genesis
 indy_endorser: indy-register-identity
 corda_ent_init: enterprise-init
