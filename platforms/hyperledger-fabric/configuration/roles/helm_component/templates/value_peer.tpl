@@ -37,6 +37,7 @@ spec:
         externalUrlSuffix: {{ org.external_url_suffix }}
 
     storage:
+      nameOverride: {{ component_ns }}-storage
       enabled: {{ sc_enabled }}
       peer: 512Mi
       couchdb: 512Mi
