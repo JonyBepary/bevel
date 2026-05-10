@@ -37,6 +37,7 @@ spec:
         externalUrlSuffix: develop.local.com
 
     storage:
+      nameOverride: supplychain-net-storage
       size: 512Mi
       reclaimPolicy: "Delete"
       volumeBindingMode: Immediate
