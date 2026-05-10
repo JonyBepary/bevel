@@ -3,12 +3,7 @@
 {{- end -}}
 
 {{- define "bevel-storageclass.fullname" -}}
-{{- $name := default .Chart.Name .Values.nameOverride -}}
-{{- printf "%s-%s-%s" .Release.Namespace $name .Release.Name | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-
-{{- define "bevel-storageclass.chart" -}}
-{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
+{{- printf "storage-%s-%s" .Release.Namespace .Release.Name | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{- define "provisioner" -}}

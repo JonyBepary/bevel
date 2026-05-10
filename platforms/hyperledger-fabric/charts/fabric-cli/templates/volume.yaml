@@ -16,7 +16,7 @@ spec:
   {{- if .Values.storageClass }}
   storageClassName: {{ .Values.storageClass }}
   {{- else }}
-  storageClassName: storage-{{ .Release.Name }}
+  storageClassName: storage-{{ .Release.Namespace }}-{{ .Release.Name }}
   {{- end }}
   accessModes:
     - ReadWriteOnce
