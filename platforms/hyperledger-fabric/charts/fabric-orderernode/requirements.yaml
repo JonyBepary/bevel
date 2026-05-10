@@ -1,10 +1,4 @@
 dependencies:
-#   - name: bevel-storageclass
-#     alias: storage
-#     repository: "file://../../../shared/charts/bevel-storageclass"
-    tags:
-#       - storage
-    version: ~1.0.0
   - name: fabric-catools
     alias: certs
     repository: "file://../fabric-catools"
