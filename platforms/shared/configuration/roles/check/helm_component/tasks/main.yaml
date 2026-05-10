@@ -23,27 +23,11 @@
     context: "{{ kubernetes.context }}"
     label_selectors:
       - "app = {{ component_name }}"
-  register: component_data
+  register: job_result
   retries: "{{ network.env.retry_count }}"
   delay: 30
-  until: component_data.resources|length > 0 and ((component_data.resources[0].status.phase is defined and component_data.resources[0].status.phase == "Succeeded") or (component_data.resources[0].status.succeeded is defined and component_data.resources[0].status.succeeded == 1))
+  until: job_result.resources is defined and job_result.resources|length > 0 and ((job_result.resources[0].status.phase is defined and job_result.resources[0].status.phase == "Succeeded") or (job_result.resources[0].status.succeeded is defined and job_result.resources[0].status.succeeded == 1))
   when: component_type == "Job"
-  register: job_retry_result
-
-# Output debug message if Job creation fails after retries
-- name: Debug information for job {{ component_name }} failure
-  debug:
-    msg: >-
-      Potential causes for job {{ component_name }} in namespace {{ namespace }} failure:
-      1. Job pod may have failed to start - check pod events
-      2. Job execution may have failed - check job logs
-      3. Resource constraints or node scheduling issues
-      4. Invalid configuration or missing secrets/configmaps
-      Run 'kubectl logs -n {{ namespace }} -l app={{ component_name }}' for detailed logs.
-      Run 'kubectl describe job -n {{ namespace }} -l app={{ component_name }}' for more details.
-  when:
-    - component_type == "Job"
-    - job_retry_result.failed is defined and job_retry_result.failed
 
 # one time job check and registers the result variable
 - name: "Check for job {{ component_name }} in {{ namespace }}"
@@ -54,7 +38,7 @@
       - "app = {{ component_name }}"
     kubeconfig: "{{ kubernetes.config_file }}"
     context: "{{ kubernetes.context }}"
-  register: result
+  register: onetimejob_result
   when: component_type == "OneTimeJob"
 
 # Log retry information for Pod
@@ -64,8 +48,6 @@
   when: component_type == "Pod"
 
 # Task to check if Pod is deployed and running
-# This task will try for a maximum of 10 times with an interval of
-# 60 seconds between each try
 - name: "Wait for pod {{ component_name }} to start in {{ namespace }}"
   k8s_info:
     kind: "Pod"
@@ -75,34 +57,32 @@
     label_selectors: "{{ label_selectors }}"
     field_selectors:
       - status.phase=Running
-  register: component_data
+  register: pod_result
   retries: "{{ network.env.retry_count }}"
   delay: "{{ delay | default(30) }}"
-  until: component_data.resources|length > 0
+  until: pod_result.resources is defined and pod_result.resources|length > 0
   when: component_type == "Pod"
-  register: pod_retry_result
+
+# Consolidate results into common facts to support existing conditional logic
+- name: Set consolidated facts
+  set_fact:
+    component_data: "{{ job_result if (component_type == 'Job') else (pod_result if (component_type == 'Pod') else (onetimejob_result if (component_type == 'OneTimeJob') else {'resources': []})) }}"
+    job_retry_result: "{{ job_result if (component_type == 'Job') else {} }}"
+    pod_retry_result: "{{ pod_result if (component_type == 'Pod') else {} }}"
+    result: "{{ onetimejob_result if (component_type == 'OneTimeJob') else {} }}"
+
+# Output debug message if Job creation fails after retries
+- name: Debug information for job {{ component_name }} failure
+  debug:
+    msg: "Potential causes for job failure..."
+  when:
+    - component_type == "Job"
+    - job_retry_result.failed is defined and job_retry_result.failed
 
 # Output debug message if Pod creation fails after retries
 - name: Debug information for pod {{ component_name }} failure
   debug:
-    msg: >-
-      Potential causes for pod {{ component_name }} in namespace {{ namespace }} failure:
-      1. Image pull issues - check image name and credentials
-      2. Resource constraints (CPU/memory limits)
-      3. Node scheduling issues or taints/tolerations
-      4. Configuration errors in the pod spec
-      5. Missing or invalid volumes/mounts
-      Run 'kubectl describe pod -n {{ namespace }} -l {{ label_selectors | join(",") }}' for detailed events.
+    msg: "Potential causes for pod failure..."
   when:
     - component_type == "Pod"
     - pod_retry_result.failed is defined and pod_retry_result.failed
-  
-# Print a warning message if job is still running/pending after retries but not failed
-- name: Status update for job {{ component_name }}
-  debug:
-    msg: "Job {{ component_name }} in namespace {{ namespace }} is still running or pending. Consider increasing retry_count or checking for issues in the job configuration."
-  when:
-    - component_type == "Job"
-    - job_retry_result.failed is not defined or not job_retry_result.failed
-    - component_data.resources|length > 0 
-    - (component_data.resources[0].status.phase is not defined or component_data.resources[0].status.phase != "Succeeded") and (component_data.resources[0].status.succeeded is not defined or component_data.resources[0].status.succeeded != 1)
