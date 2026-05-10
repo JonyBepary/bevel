@@ -12,7 +12,7 @@
   environment:
     VAULT_ADDR: "{{ vault.url }}"
     VAULT_TOKEN: "{{ vault.root_token }}"
-  register: auth_lists
+  register: auth_lists_result
   when: check == "vault_auth"
 
 # This task checks if the vault-ro policy already exists
@@ -61,24 +61,23 @@
   environment:
     VAULT_ADDR: "{{ vault.url }}"
     VAULT_TOKEN: "{{ vault.root_token }}"
-  register: vault_result
+  register: vault_raw_result
   retries: "{{ network.env.retry_count}}"
   delay: 30
-  until: vault_result.failed == False
+  until: vault_raw_result.failed == False
   when: check == "crypto_materials"
-  register: vault_retry_result
+
+# Consolidate results for crypto_materials
+- name: Set consolidated vault facts
+  set_fact:
+    vault_result: "{{ vault_raw_result if (check == 'crypto_materials') else {} }}"
+    vault_retry_result: "{{ vault_raw_result if (check == 'crypto_materials') else {} }}"
+    auth_lists: "{{ auth_lists_result if (check == 'vault_auth') else {} }}"
 
 # Output debug message if vault operation fails after retries
 - name: Debug information for vault failure
   debug:
-    msg: >-
-      Potential causes for Vault operation failure at path {{ vault_path }}:
-      1. Vault server unavailable or network connectivity issues
-      2. Invalid Vault token or expired token
-      3. Path doesn't exist or field doesn't exist at the specified path
-      4. Insufficient permissions to access the Vault path
-      5. Crypto materials may not have been generated yet
-      Verify Vault status with 'vault status' and check that the crypto generation process completed successfully.
+    msg: "Potential causes for Vault operation failure..."
   when:
     - check == "crypto_materials"
     - vault_retry_result.failed is defined and vault_retry_result.failed
